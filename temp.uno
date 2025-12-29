@@ -3,7 +3,6 @@
 #include <Ethernet.h>
 #include "DHT.h"
 
-/* ================= PIN CONFIG ================= */
 #define CLK 8
 #define DIO 9
 #define DHTPIN 2
@@ -13,34 +12,26 @@ TM1637Display display(CLK, DIO);
 DHT dht(DHTPIN, DHTTYPE);
 EthernetClient client;
 
-/* ================= NETWORK CONFIG ================= */
 byte mac[]     = { 0xDE, 0xAD, 0xBE, 0xEF, 0xFE, 0xED };
-
-// Static IP (utama)
 byte ip[]      = { 172, 18, 20, 242 };
 byte subnet[]  = { 255, 255, 255, 0 };
 byte gateway[] = { 172, 18, 20, 1 };
-byte dns[]     = { 8, 8, 8, 8 };
+byte dns[]     = { 1, 1, 1, 1 };
+byte server[]  = { 172, 18, 10, 111 };
+const int serverPort = 8086;
 
-// Server
-byte server[]  = { 172, 18, 20, 10 };
-const int serverPort = 8080;
 
-/* ================= API ================= */
 #define API_KEY "wlksdnfUBDlkndfjbdjfSDJBmdflmdf"
 
-/* ================= SETTINGS ================= */
 #define MAX_RETRY     3
 #define CLIENT_TIMEOUT 5000   // ms
 #define SEND_INTERVAL 300000  // 5 menit
 
-/* ================= DISPLAY SYMBOL ================= */
 const uint8_t celsius[] = {
   SEG_A | SEG_B | SEG_F | SEG_G,
   SEG_A | SEG_D | SEG_E | SEG_F
 };
 
-/* ================= SETUP ================= */
 void setup() {
   Serial.begin(9600);
 
@@ -67,7 +58,6 @@ void setup() {
   Serial.println("System ready");
 }
 
-/* ================= SEND DATA FUNCTION ================= */
 bool sendData(float temp, float hum) {
   for (int attempt = 1; attempt <= MAX_RETRY; attempt++) {
     Serial.print("Connecting (try ");
@@ -77,8 +67,8 @@ bool sendData(float temp, float hum) {
     if (client.connect(server, serverPort)) {
       client.setTimeout(CLIENT_TIMEOUT);
 
-      client.println("POST /data.php HTTP/1.1");
-      client.println("Host: 172.18.20.10:8080");
+      client.println("POST / HTTP/1.1");
+      client.println("Host: 172.18.10.111:8086");
       client.println("Content-Type: application/x-www-form-urlencoded");
       client.print("X-API-KEY: ");
       client.println(API_KEY);
@@ -109,7 +99,6 @@ bool sendData(float temp, float hum) {
   return false;
 }
 
-/* ================= LOOP ================= */
 void loop() {
   float hum  = dht.readHumidity();
   float temp = dht.readTemperature();
@@ -120,11 +109,9 @@ void loop() {
     return;
   }
 
-  // Display temperature
   display.showNumberDec((int)temp, false, 2, 0);
   display.setSegments(celsius, 2, 2);
 
-  // Send data
   if (sendData(temp, hum)) {
     digitalWrite(LED_BUILTIN, HIGH);
     delay(100);
